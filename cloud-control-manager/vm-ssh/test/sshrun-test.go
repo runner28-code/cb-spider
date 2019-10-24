@@ -17,9 +17,7 @@ func main() {
 	userName := "root"
 
 
-//	keyName := "/root/.ssh/id_rsa"
-
-        keyName  := []byte(`-----BEGIN RSA PRIVATE KEY-----
+        privateKey  := []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEoQIBAAKCAQEArVNOLwMIp5VmZ4VPZotcoCHdEzimKalAsz+ccLfvAA1Y2ELH
 VwihRvkrqukUlkC7B3ASSCtgxIt5ZqfAKy9JvlT+Po/XHfaIpu9KM/XsZSdsF2jS
 zv3TCSvod2f09Bx7ebowLVRzyJe4UG+0OuM10Sk9dXRXL+viizyyPp1Ie2+FN32i
@@ -58,22 +56,14 @@ cHMCgYBmdhIjJnWbqU5oHVQHN7sVCiRAScAUyTqlUCqB/qSpweZfR+aQ72thnx7C
 
 	sshInfo := sshrun.SSHInfo{
 		UserName: userName,
-		PrivateKey: keyName,
+		PrivateKey: privateKey,
 		ServerPort: serverPort,
 	}	
-	sshCli, err := sshrun.Connect(sshInfo) 
-        if err != nil {
-                fmt.Println("Couldn't establisch a connection to the remote server ", err)
-                return
-        }
-
 	var result string
-        if result, err = sshrun.RunCommand(sshCli, cmd); err != nil {
+	var err	error
+        if result, err = sshrun.SSHRun(sshInfo, cmd); err != nil {
                 fmt.Println("Error while running cmd: " + cmd, err)
         }
 
 	fmt.Println(result)
-
-        sshrun.Close(sshCli)
-	
 }
