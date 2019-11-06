@@ -11,627 +11,175 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 
-	gcpdrv "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/drivers/gcp"
-	idrv "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/interfaces"
+	testconf "./conf"
+	cblog "github.com/cloud-barista/cb-log"
 	irs "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/interfaces/resources"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
-type Config struct {
-	Type         string `json:"type"`
-	ProjectID    string `json:"project_id"`
-	PrivateKeyID string `json:"private_key_id"`
-	PrivateKey   string `json:"private_key"`
-	ClientEmail  string `json:"client_email"`
-	ClientID     string `json:"client_id"`
-	AuthURI      string `json:"auth_uri"`
-	TokenURI     string `json:"token_uri"`
-	AuthProvider string `json:"auth_provider_x509_cert_url"`
+var cblogger *logrus.Logger
+
+func init() {
+	// cblog is a global variable.
+	cblogger = cblog.GetLogger("GCP Resource Test")
+	cblog.SetLevel("debug")
 }
 
-const CredentialFilePath = "/Users/thaeao/Keystore/mcloud-barista-251102-1569f817bd23.json"
+// Test VM
+func handleVM() {
+	cblogger.Info("Start VM Resource Test")
 
-// Test VM Handler Functions (Get VM Info, VM Status)
-func getVMInfo() {
-
-	vmHandler, err := setVMHandler()
+	ResourceHandler, err := testconf.GetResourceHandler("VM")
 	if err != nil {
 		panic(err)
 	}
-	//config, _ := readFileConfig(CredentialFilePath)
 
-	// Get VM List
-	vmList, err := vmHandler.ListVM()
-	if err != nil {
-		log.Fatal(err)
-	}
-	var vmId string
-	for i, vm := range vmList {
-		list := *vm
-		fmt.Println("[", i, "] ")
-		if i == 0 {
-			vmId = list.Id
+	handler := ResourceHandler.(irs.VMHandler)
+
+	VmID := "vm01"
+
+	for {
+		fmt.Println("VM Management")
+		fmt.Println("0. Quit")
+		fmt.Println("1. VM Start")
+		fmt.Println("2. VM Info")
+		fmt.Println("3. Suspend VM")
+		fmt.Println("4. Resume VM")
+		fmt.Println("5. Reboot VM")
+		fmt.Println("6. Terminate VM")
+
+		fmt.Println("7. GetVMStatus VM")
+		fmt.Println("8. ListVMStatus VM")
+		fmt.Println("9. ListVM")
+
+		var commandNum int
+		inputCnt, err := fmt.Scan(&commandNum)
+		if err != nil {
+			panic(err)
 		}
-		spew.Dump(vm)
+
+		if inputCnt == 1 {
+			switch commandNum {
+			case 0:
+				return
+
+			case 1:
+				vmReqInfo := irs.VMReqInfo{
+					VMName: "vm01",
+					//ImageId:            config.Aws.ImageID,
+					VirtualNetworkId: "cb-vnet",
+					//NetworkInterfaceId: "eni-00befb6d8c3a87b24",
+					PublicIPId: "publicip-vm01",
+					//SecurityGroupIds: []string{"sg-0df1c209ea1915e4b"},
+					//SecurityGroupIds: []string{config.Aws.SecurityGroupID},
+					VMSpecId: "f1-micro",
+					//KeyPairName:      config.Aws.KeyName,
+				}
+
+				vmInfo, err := handler.StartVM(vmReqInfo)
+				if err != nil {
+					//panic(err)
+					cblogger.Error(err)
+				} else {
+					cblogger.Info("VM 생성 완료!!", vmInfo)
+					spew.Dump(vmInfo)
+				}
+
+			case 2:
+				vmInfo, err := handler.GetVM(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM 정보 조회 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM 정보 조회 결과", VmID)
+					cblogger.Info(vmInfo)
+					spew.Dump(vmInfo)
+				}
+
+			case 3:
+				cblogger.Info("Start Suspend VM ...")
+				err := handler.SuspendVM(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM Suspend 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM Suspend 성공", VmID)
+				}
+
+			case 4:
+				cblogger.Info("Start Resume  VM ...")
+				err := handler.ResumeVM(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM Resume 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM Resume 성공", VmID)
+				}
+
+			case 5:
+				cblogger.Info("Start Reboot  VM ...")
+				err := handler.RebootVM(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM Reboot 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM Reboot 성공", VmID)
+				}
+
+			case 6:
+				cblogger.Info("Start Terminate  VM ...")
+				err := handler.TerminateVM(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM Terminate 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM Terminate 성공", VmID)
+				}
+
+			case 7:
+				cblogger.Info("Start Get VM Status...")
+				vmStatus, err := handler.GetVMStatus(VmID)
+				if err != nil {
+					cblogger.Errorf("[%s] VM Get Status 실패", VmID)
+					cblogger.Error(err)
+				} else {
+					cblogger.Infof("[%s] VM Get Status 성공 : [%s]", VmID, vmStatus)
+				}
+
+			case 8:
+				cblogger.Info("Start ListVMStatus ...")
+				vmStatusInfos, err := handler.ListVMStatus()
+				if err != nil {
+					cblogger.Error("ListVMStatus 실패")
+					cblogger.Error(err)
+				} else {
+					cblogger.Info("ListVMStatus 성공")
+					cblogger.Info(vmStatusInfos)
+					spew.Dump(vmStatusInfos)
+				}
+
+			case 9:
+				cblogger.Info("Start ListVM ...")
+				vmList, err := handler.ListVM()
+				if err != nil {
+					cblogger.Error("ListVM 실패")
+					cblogger.Error(err)
+				} else {
+					cblogger.Info("ListVM 성공")
+					cblogger.Info("=========== VM 목록 ================")
+					cblogger.Info(vmList)
+					spew.Dump(vmList)
+				}
+
+			}
+		}
 	}
-
-	// Get VM Info
-	vmInfo, _ := vmHandler.GetVM(vmId)
-	spew.Dump(vmInfo)
-
-	// Get VM Status List
-	vmStatusList, _ := vmHandler.ListVMStatus()
-	for i, vmStatus := range vmStatusList {
-		fmt.Println("[", i, "] ", *vmStatus)
-	}
-
-	// Get VM Status
-	vmStatus, _ := vmHandler.GetVMStatus(vmId)
-	fmt.Println(vmStatus)
 }
-
-// // Test VM Lifecycle Management (Suspend/Resume/Reboot/Terminate)
-// func handleVM() {
-// 	vmHandler, err := setVMHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("VM LifeCycle Management")
-// 	fmt.Println("1. Suspend VM")
-// 	fmt.Println("2. Resume VM")
-// 	fmt.Println("3. Reboot VM")
-// 	fmt.Println("4. Terminate VM")
-
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		vmId := config.GCP.GroupName + ":" + config.GCP.VMName
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start Suspend VM ...")
-// 				vmHandler.SuspendVM(vmId)
-// 				fmt.Println("Finish Suspend VM")
-// 			case 2:
-// 				fmt.Println("Start Resume  VM ...")
-// 				vmHandler.ResumeVM(vmId)
-// 				fmt.Println("Finish Resume VM")
-// 			case 3:
-// 				fmt.Println("Start Reboot  VM ...")
-// 				vmHandler.RebootVM(vmId)
-// 				fmt.Println("Finish Reboot VM")
-// 			case 4:
-// 				fmt.Println("Start Terminate  VM ...")
-// 				vmHandler.TerminateVM(vmId)
-// 				fmt.Println("Finish Terminate VM")
-// 			}
-// 		}
-// 	}
-// }
-
-// // Test VM Deployment
-// func createVM() {
-// 	fmt.Println("Start Create VM ...")
-// 	vmHandler, err := setVMHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	vmName := config.GCP.GroupName + ":" + config.GCP.VMName
-// 	imageId := config.GCP.Image.Publisher + ":" + config.GCP.Image.Offer + ":" + config.GCP.Image.Sku + ":" + config.GCP.Image.Version
-// 	vmReqInfo := irs.VMReqInfo{
-// 		Name: vmName,
-// 		ImageInfo: irs.ImageInfo{
-// 			Id: imageId,
-// 		},
-// 		SpecID: config.GCP.VMSize,
-// 		VNetworkInfo: irs.VNetworkInfo{
-// 			Id: config.GCP.Network.ID,
-// 		},
-// 		LoginInfo: irs.LoginInfo{
-// 			AdminUsername: config.GCP.Os.AdminUsername,
-// 			AdminPassword: config.GCP.Os.AdminPassword,
-// 		},
-// 	}
-
-// 	vm, err := vmHandler.StartVM(vmReqInfo)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	spew.Dump(vm)
-// 	fmt.Println("Finish Create VM")
-// }
-
-// func testImageHandler() {
-// 	imageHandler, err := setImageHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("Test ImageHandler")
-// 	fmt.Println("1. ListImage()")
-// 	fmt.Println("2. GetImage()")
-// 	fmt.Println("3. CreateImage()")
-// 	fmt.Println("4. DeleteImage()")
-// 	fmt.Println("5. Exit Program")
-
-// Loop:
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		imageId := config.GCP.ImageInfo.GroupName + ":" + config.GCP.ImageInfo.Name
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start ListImage() ...")
-// 				imageHandler.ListImage()
-// 				fmt.Println("Finish ListImage()")
-// 			case 2:
-// 				fmt.Println("Start GetImage() ...")
-// 				imageHandler.GetImage(imageId)
-// 				fmt.Println("Finish GetImage()")
-// 			case 3:
-// 				fmt.Println("Start CreateImage() ...")
-// 				reqInfo := irs.ImageReqInfo{Id: imageId}
-// 				_, err := imageHandler.CreateImage(reqInfo)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-// 				fmt.Println("Finish CreateImage()")
-// 			case 4:
-// 				fmt.Println("Start DeleteImage() ...")
-// 				imageHandler.DeleteImage(imageId)
-// 				fmt.Println("Finish DeleteImage()")
-// 			case 5:
-// 				fmt.Println("Exit Program")
-// 				break Loop
-// 			}
-// 		}
-// 	}
-// }
-
-// func testPublicIPHandler() {
-// 	publicIPHandler, err := setPublicIPHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("Test PublicIPHandler")
-// 	fmt.Println("1. ListPublicIP()")
-// 	fmt.Println("2. GetPublicIP()")
-// 	fmt.Println("3. CreatePublicIP()")
-// 	fmt.Println("4. DeletePublicIP()")
-// 	fmt.Println("5. Exit Program")
-
-// Loop:
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		publicIPId := config.GCP.PublicIP.GroupName + ":" + config.GCP.PublicIP.Name
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start ListPublicIP() ...")
-// 				publicIPHandler.ListPublicIP()
-// 				fmt.Println("Finish ListPublicIP()")
-// 			case 2:
-// 				fmt.Println("Start GetPublicIP() ...")
-// 				publicIPHandler.GetPublicIP(publicIPId)
-// 				fmt.Println("Finish GetPublicIP()")
-// 			case 3:
-// 				fmt.Println("Start CreatePublicIP() ...")
-// 				reqInfo := irs.PublicIPReqInfo{Id: publicIPId}
-// 				_, err := publicIPHandler.CreatePublicIP(reqInfo)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-// 				fmt.Println("Finish CreatePublicIP()")
-// 			case 4:
-// 				fmt.Println("Start DeletePublicIP() ...")
-// 				publicIPHandler.DeletePublicIP(publicIPId)
-// 				fmt.Println("Finish DeletePublicIP()")
-// 			case 5:
-// 				fmt.Println("Exit Program")
-// 				break Loop
-// 			}
-// 		}
-// 	}
-// }
-
-// func testSecurityHandler() {
-// 	securityHandler, err := setSecurityHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("Test SecurityHandler")
-// 	fmt.Println("1. ListSecurity()")
-// 	fmt.Println("2. GetSecurity()")
-// 	fmt.Println("3. CreateSecurity()")
-// 	fmt.Println("4. DeleteSecurity()")
-// 	fmt.Println("5. Exit Program")
-
-// Loop:
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		securityId := config.GCP.Security.GroupName + ":" + config.GCP.Security.Name
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start ListSecurity() ...")
-// 				securityHandler.ListSecurity()
-// 				fmt.Println("Finish ListSecurity()")
-// 			case 2:
-// 				fmt.Println("Start GetSecurity() ...")
-// 				securityHandler.GetSecurity(securityId)
-// 				fmt.Println("Finish GetSecurity()")
-// 			case 3:
-// 				fmt.Println("Start CreateSecurity() ...")
-// 				reqInfo := irs.SecurityReqInfo{Id: securityId}
-// 				_, err := securityHandler.CreateSecurity(reqInfo)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-// 				fmt.Println("Finish CreateSecurity()")
-// 			case 4:
-// 				fmt.Println("Start DeleteSecurity() ...")
-// 				securityHandler.DeleteSecurity(securityId)
-// 				fmt.Println("Finish DeleteSecurity()")
-// 			case 5:
-// 				fmt.Println("Exit Program")
-// 				break Loop
-// 			}
-// 		}
-// 	}
-// }
-
-// func testVNetworkHandler() {
-// 	vNetHandler, err := setVNetHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("Test VNetworkHandler")
-// 	fmt.Println("1. ListVNetwork()")
-// 	fmt.Println("2. GetVNetwork()")
-// 	fmt.Println("3. CreateVNetwork()")
-// 	fmt.Println("4. DeleteVNetwork()")
-// 	fmt.Println("5. Exit Program")
-
-// Loop:
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		networkId := config.GCP.VNetwork.GroupName + ":" + config.GCP.VNetwork.Name
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start ListVNetwork() ...")
-// 				vNetHandler.ListVNetwork()
-// 				fmt.Println("Finish ListVNetwork()")
-// 			case 2:
-// 				fmt.Println("Start GetVNetwork() ...")
-// 				vNetHandler.GetVNetwork(networkId)
-// 				fmt.Println("Finish GetVNetwork()")
-// 			case 3:
-// 				fmt.Println("Start CreateVNetwork() ...")
-// 				reqInfo := irs.VNetworkReqInfo{Id: networkId}
-// 				_, err := vNetHandler.CreateVNetwork(reqInfo)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-// 				fmt.Println("Finish CreateVNetwork()")
-// 			case 4:
-// 				fmt.Println("Start DeleteVNetwork() ...")
-// 				vNetHandler.DeleteVNetwork(networkId)
-// 				fmt.Println("Finish DeleteVNetwork()")
-// 			case 5:
-// 				fmt.Println("Exit Program")
-// 				break Loop
-// 			}
-// 		}
-// 	}
-// }
-
-// func testVNicHandler() {
-// 	vNicHandler, err := setVNicHandler()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	config := readConfigFile()
-
-// 	fmt.Println("Test VNicHandler")
-// 	fmt.Println("1. ListVNic()")
-// 	fmt.Println("2. GetVNic()")
-// 	fmt.Println("3. CreateVNic()")
-// 	fmt.Println("4. DeleteVNic()")
-// 	fmt.Println("5. Exit Program")
-
-// Loop:
-// 	for {
-// 		var commandNum int
-// 		inputCnt, err := fmt.Scan(&commandNum)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		vNicId := config.GCP.VNic.GroupName + ":" + config.GCP.VNic.Name
-
-// 		if inputCnt == 1 {
-// 			switch commandNum {
-// 			case 1:
-// 				fmt.Println("Start ListVNic() ...")
-// 				vNicHandler.ListVNic()
-// 				fmt.Println("Finish ListVNic()")
-// 			case 2:
-// 				fmt.Println("Start GetVNic() ...")
-// 				vNicHandler.GetVNic(vNicId)
-// 				fmt.Println("Finish GetVNic()")
-// 			case 3:
-// 				fmt.Println("Start CreateVNic() ...")
-// 				reqInfo := irs.VNicReqInfo{Id: vNicId}
-// 				_, err := vNicHandler.CreateVNic(reqInfo)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-// 				fmt.Println("Finish CreateVNic()")
-// 			case 4:
-// 				fmt.Println("Start DeleteVNic() ...")
-// 				vNicHandler.DeleteVNic(vNicId)
-// 				fmt.Println("Finish DeleteVNic()")
-// 			case 5:
-// 				fmt.Println("Exit Program")
-// 				break Loop
-// 			}
-// 		}
-// 	}
-// }
-
-func setVMHandler() (irs.VMHandler, error) {
-	var cloudDriver idrv.CloudDriver
-	cloudDriver = new(gcpdrv.GCPDriver)
-	cloudDriver.GetDriverVersion()
-	credentialFilePath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	config, _ := readFileConfig(credentialFilePath)
-	region := "asia-northeast1"
-	zone := "asia-northeast1-b"
-
-	connectionInfo := idrv.ConnectionInfo{
-		CredentialInfo: idrv.CredentialInfo{
-			ClientSecret: credentialFilePath,
-			ProjectID:    config.ProjectID,
-		},
-		RegionInfo: idrv.RegionInfo{
-			Region: region,
-			Zone:   zone,
-		},
-	}
-
-	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-	vmHandler, err := cloudConnection.CreateVMHandler()
-	if err != nil {
-		return nil, err
-	}
-	return vmHandler, nil
-}
-
-// func setImageHandler() (irs.ImageHandler, error) {
-// 	var cloudDriver idrv.CloudDriver
-// 	cloudDriver = new(gcpdrv.GCPDriver)
-
-// 	config := readConfigFile()
-// 	connectionInfo := idrv.ConnectionInfo{
-// 		CredentialInfo: idrv.CredentialInfo{
-// 			ClientId:       config.GCP.ClientId,
-// 			ClientSecret:   config.GCP.ClientSecret,
-// 			TenantId:       config.GCP.TenantId,
-// 			SubscriptionId: config.GCP.SubscriptionID,
-// 		},
-// 		RegionInfo: idrv.RegionInfo{
-// 			Region:        config.GCP.Location,
-// 			ResourceGroup: config.GCP.GroupName,
-// 		},
-// 	}
-
-// 	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	imageHandler, err := cloudConnection.CreateImageHandler()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return imageHandler, nil
-// }
-
-// func setPublicIPHandler() (irs.PublicIPHandler, error) {
-// 	var cloudDriver idrv.CloudDriver
-// 	cloudDriver = new(gcpdrv.GCPDriver)
-
-// 	config := readConfigFile()
-// 	connectionInfo := idrv.ConnectionInfo{
-// 		CredentialInfo: idrv.CredentialInfo{
-// 			ClientId:       config.GCP.ClientId,
-// 			ClientSecret:   config.GCP.ClientSecret,
-// 			TenantId:       config.GCP.TenantId,
-// 			SubscriptionId: config.GCP.SubscriptionID,
-// 		},
-// 		RegionInfo: idrv.RegionInfo{
-// 			Region:        config.GCP.Location,
-// 			ResourceGroup: config.GCP.GroupName,
-// 		},
-// 	}
-
-// 	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	publicIPHandler, err := cloudConnection.CreatePublicIPHandler()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return publicIPHandler, nil
-// }
-
-// func setSecurityHandler() (irs.SecurityHandler, error) {
-// 	var cloudDriver idrv.CloudDriver
-// 	cloudDriver = new(gcpdrv.GCPDriver)
-
-// 	config := readConfigFile()
-// 	connectionInfo := idrv.ConnectionInfo{
-// 		CredentialInfo: idrv.CredentialInfo{
-// 			ClientId:       config.GCP.ClientId,
-// 			ClientSecret:   config.GCP.ClientSecret,
-// 			TenantId:       config.GCP.TenantId,
-// 			SubscriptionId: config.GCP.SubscriptionID,
-// 		},
-// 		RegionInfo: idrv.RegionInfo{
-// 			Region:        config.GCP.Location,
-// 			ResourceGroup: config.GCP.GroupName,
-// 		},
-// 	}
-
-// 	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	securityHandler, err := cloudConnection.CreateSecurityHandler()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return securityHandler, nil
-// }
-
-// func setVNetHandler() (irs.VNetworkHandler, error) {
-// 	var cloudDriver idrv.CloudDriver
-// 	cloudDriver = new(gcpdrv.GCPDriver)
-
-// 	config := readConfigFile()
-// 	connectionInfo := idrv.ConnectionInfo{
-// 		CredentialInfo: idrv.CredentialInfo{
-// 			ClientId:       config.GCP.ClientId,
-// 			ClientSecret:   config.GCP.ClientSecret,
-// 			TenantId:       config.GCP.TenantId,
-// 			SubscriptionId: config.GCP.SubscriptionID,
-// 		},
-// 		RegionInfo: idrv.RegionInfo{
-// 			Region:        config.GCP.Location,
-// 			ResourceGroup: config.GCP.GroupName,
-// 		},
-// 	}
-
-// 	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	vNetHandler, err := cloudConnection.CreateVNetworkHandler()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return vNetHandler, nil
-// }
-
-// func setVNicHandler() (irs.VNicHandler, error) {
-// 	var cloudDriver idrv.CloudDriver
-// 	cloudDriver = new(gcpdrv.GCPDriver)
-
-// 	config := readConfigFile()
-// 	connectionInfo := idrv.ConnectionInfo{
-// 		CredentialInfo: idrv.CredentialInfo{
-// 			ClientId:       config.GCP.ClientId,
-// 			ClientSecret:   config.GCP.ClientSecret,
-// 			TenantId:       config.GCP.TenantId,
-// 			SubscriptionId: config.GCP.SubscriptionID,
-// 		},
-// 		RegionInfo: idrv.RegionInfo{
-// 			Region:        config.GCP.Location,
-// 			ResourceGroup: config.GCP.GroupName,
-// 		},
-// 	}
-
-// 	cloudConnection, err := cloudDriver.ConnectCloud(connectionInfo)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	vNicHandler, err := cloudConnection.CreateVNicHandler()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return vNicHandler, nil
-// }
 
 func main() {
-	// Test VM Handler
-	vmHandler, err := setVMHandler()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(vmHandler)
-	getVMInfo()
-	//handleVM()
-	//createVM()
-
-	// Teset Resource Handler
-	//testImageHandler()
-	//testPublicIPHandler()
-	//testSecurityHandler()
-	//testVNetworkHandler()
-	//testVNicHandler()
-}
-
-func readFileConfig(filepath string) (Config, error) {
-
-	data, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		panic(err)
-	}
-
-	var config Config
-	json.Unmarshal(data, &config)
-	fmt.Println("readFileConfig Json : ", config.ClientEmail)
-
-	return config, err
-
+	cblogger.Info("GCP Resource Test")
+	handleVM()
 }
