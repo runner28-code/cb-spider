@@ -8,9 +8,7 @@
 //
 // by CB-Spider Team, 2019.06.
 
-//package main
-
-package aws
+package main
 
 import (
 	"C"
