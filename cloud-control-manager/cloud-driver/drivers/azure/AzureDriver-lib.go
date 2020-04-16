@@ -8,7 +8,7 @@
 //
 // by hyokyung.kim@innogrid.co.kr, 2019.07.
 
-package azure
+package main
 
 import (
 	"context"
@@ -301,4 +301,4 @@ func getVmSpecClient(credential idrv.CredentialInfo) (context.Context, *compute.
 	return ctx, &vmSpecClient, nil
 }
 
-var TestDriver AzureDriver
+var CloudDriver AzureDriver
