@@ -25,76 +25,84 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-type GCPVHandler struct {
+type GCPVPCHandler struct {
 	Region     idrv.RegionInfo
 	Ctx        context.Context
 	Client     *compute.Service
 	Credential idrv.CredentialInfo
 }
 
-func (vVPCHandler *GCPVPCHandler) CreateVNetwork(vNetworkReqInfo irs.VNetworkReqInfo) (irs.VNetworkInfo, error) {
-	cblogger.Info(vNetworkReqInfo)
+func (vVPCHandler *GCPVPCHandler) CreateVPC(vpcReqInfo irs.VPCReqInfo) (irs.VPCInfo, error) {
+	cblogger.Info(vpcReqInfo)
 
 	var cnt string
 	isFirst := false
 
 	projectID := vVPCHandler.Credential.ProjectID
 	region := vVPCHandler.Region.Region
-	name := GetCBDefaultVNetName()
+	//name := GetCBDefaultVNetName()
+	name := vpcReqInfo.IId.NameId
 
-	cblogger.Infof("생성된 [%s] VNetwork가 있는지 체크", name)
+	//서브넷 있는지 확인
+	autoCreateSubnetworks := false
+
+	if vpcReqInfo.SubnetInfoList != nil {
+		autoCreateSubnetworks := true
+	}
+
+	cblogger.Infof("생성된 [%s] VPC가 있는지 체크", name)
 	vNetInfo, errVnet := vVPCHandler.Client.Networks.Get(projectID, name).Do()
 	spew.Dump(vNetInfo)
 	if errVnet != nil {
 		isFirst = true
 		cblogger.Error(errVnet)
 
-		cblogger.Infof("존재하는 [%s] VNetwork가 없으므로 새로 생성해야 함", name)
+		cblogger.Infof("존재하는 [%s] VPC가 없으므로 새로 생성해야 함", name)
 		network := &compute.Network{
 			Name: name,
 			//Name:                  GetCBDefaultVNetName(),
-			AutoCreateSubnetworks: true, // subnet 자동으로 생성됨
+			AutoCreateSubnetworks: autoCreateSubnetworks, // subnet 유무에 따라서 달라짐 true, false
 		}
 
-		cblogger.Infof("[%s] VNetwork 생성 시작", name)
+		cblogger.Infof("[%s] VPC 생성 시작", name)
 		cblogger.Info(network)
 		_, err := vVPCHandler.Client.Networks.Insert(projectID, network).Do()
 		if err != nil {
-			cblogger.Errorf("[%s] VNetwork 생성 실패", name)
+			cblogger.Errorf("[%s] VPC 생성 실패", name)
 			cblogger.Error(err)
-			return irs.VNetworkInfo{}, errVnet
+			return irs.VPCInfo{}, errVnet
 		}
 
-		cblogger.Infof("[%s] VNetwork 정상적으로 생성되고 있습니다.", name)
+		cblogger.Infof("[%s] VPC 정상적으로 생성되고 있습니다.", name)
 		before_time := time.Now()
 		max_time := 120
 
 		// loop --> 생성 check --> 생성 되었으면, break; 안됐으면 sleep 5초 -->
 		// if(total sleep 120sec?) error
 
-		cblogger.Info("VNetwork가 모두 생성될 때까지 5초 텀으로 체크 시작")
+		cblogger.Info("VPC가 모두 생성될 때까지 5초 텀으로 체크 시작")
 		for {
-			cblogger.Infof("==> [%s] VNetwork 정보 조회", name)
+			cblogger.Infof("==> [%s] VPC 정보 조회", name)
 			_, errVnet := vVPCHandler.Client.Networks.Get(projectID, name).Do()
 			if errVnet != nil {
-				cblogger.Errorf("==> [%s] VNetwork 정보 조회 실패", name)
+				cblogger.Errorf("==> [%s] VPC 정보 조회 실패", name)
 				cblogger.Error(errVnet)
 
 				time.Sleep(time.Second * 5)
 				after_time := time.Now()
 				diff := after_time.Sub(before_time)
 				if int(diff.Seconds()) > max_time {
-					cblogger.Errorf("[%d]초 동안 [%s] VNetwork 정보가 조회되지 않아서 강제로 종료함.", max_time, name)
-					return irs.VNetworkInfo{}, errVnet
+					cblogger.Errorf("[%d]초 동안 [%s] VPC 정보가 조회되지 않아서 강제로 종료함.", max_time, name)
+					return irs.VPCInfo{}, errVnet
 				}
 			} else {
 				//생성된 VPC와 서브넷 이름이 동일하지 않으면 VPC의 기본 서브넷이 모두 생성될 때까지 20초 정도 대기
-				//if name != vNetworkReqInfo.Name {
-				cblogger.Info("생성된 VNetwork정보가 조회되어도 리전에서는 계속 생성되고 있기 때문에 20초 대기")
+				//if name != VPCReqInfo.Name {
+				cblogger.Info("생성된 VPC정보가 조회되어도 리전에서는 계속 생성되고 있기 때문에 20초 대기")
 				time.Sleep(time.Second * 20)
 				//}
 
-				cblogger.Infof("==> [%s] VNetwork 정보 생성 완료", name)
+				cblogger.Infof("==> [%s] VPC 정보 생성 완료", name)
 				//서브넷이 비동기로 생성되고 있기 때문에 다시 체크해야 함.
 				newvNetInfo, _ := vVPCHandler.Client.Networks.Get(projectID, name).Do()
 				cnt = strconv.Itoa(len(newvNetInfo.Subnetworks) + 1)
@@ -102,54 +110,68 @@ func (vVPCHandler *GCPVPCHandler) CreateVNetwork(vNetworkReqInfo irs.VNetworkReq
 			}
 		}
 	} else {
-		cblogger.Infof("이미 [%s] VNetworks가 존재함.", name)
+		cblogger.Infof("이미 [%s] VPCs가 존재함.", name)
 		cnt = strconv.Itoa(len(vNetInfo.Subnetworks) + 1)
 	}
 
 	cblogger.Info("현재 생성된 서브넷 수 : ", cnt)
-	cblogger.Infof("생성할 [%s] Subnet이 존재하는지 체크", vNetworkReqInfo.Name)
 
-	subnetInfo, errSubnet := vVPCHandler.GetVNetwork(vNetworkReqInfo.Name)
+	// 여기서부터 서브넷 체크하는 로직이 들어가야 하네. 하필 배열이네
+	for _, item := range vpcReqInfo.SubnetInfoList{
+		subnetName := item.IId.NameId
+		cblogger.Infof("생성할 [%s] Subnet이 존재하는지 체크", subnetName)
+		checkInfo, err := vVPCHandler.Client.Subnetworks.Get(projectID,region,subnetName).Do()
+		if err == nil {
+			cblogger.Error("이미 해당하는 Subnet이 존재함")
+			return irs.VPCInfo, error
+		}
+		// 4.21 오늘은 여기까지 위쪽에서 미리 서브넷안에 이미 존재하는지 체트하고 Cidr이 있는지 
+		//확인한 후 VPC  만들고 만들어지면 그 다음에 서브넷 생성 로직으로 가자.그게 낫겠다
+		
+	}
+	
+
+	subnetInfo, errSubnet := vVPCHandler.GetVPC(vPC)
 	if errSubnet == nil {
 		spew.Dump(subnetInfo)
-		//최초 생성인 경우 VNetwork와 Subnet 이름이 동일하면 이미 생성되었으므로 추가로 생성하지 않고 리턴 함.
+		//최초 생성인 경우 VPC와 Subnet 이름이 동일하면 이미 생성되었으므로 추가로 생성하지 않고 리턴 함.
 		if isFirst {
-			cblogger.Error("최초 VNetwork 생성이므로 에러 없이 조회된 서브넷 정보를 리턴 함.")
+			cblogger.Error("최초 VPC 생성이므로 에러 없이 조회된 서브넷 정보를 리턴 함.")
 			return subnetInfo, nil
 		} else {
 			cblogger.Error(errSubnet)
-			return irs.VNetworkInfo{}, errors.New("Already Exist - " + vNetworkReqInfo.Name)
+			return irs.VPCInfo{}, errors.New("Already Exist - " + VPCReqInfo.Name)
 		}
 	}
 
-	// vNetResult, _ := vVPCHandler.ListVNetwork()
+	// vNetResult, _ := vVPCHandler.ListVPC()
 
 	networkUrl := "https://www.googleapis.com/compute/v1/projects/" + projectID + "/global/networks/" + name
 	subnetWork := &compute.Subnetwork{
-		Name:        vNetworkReqInfo.Name,
+		Name:        VPCReqInfo.Name,
 		IpCidrRange: "192.168." + cnt + ".0/24",
 		Network:     networkUrl,
 	}
-	cblogger.Infof("[%s] Subnet 생성시작", vNetworkReqInfo.Name)
+	cblogger.Infof("[%s] Subnet 생성시작", VPCReqInfo.Name)
 	cblogger.Info(subnetWork)
 	res, err := vVPCHandler.Client.Subnetworks.Insert(projectID, region, subnetWork).Do()
 	if err != nil {
 		cblogger.Error("Subnet 생성 실패")
 		cblogger.Error(err)
-		return irs.VNetworkInfo{}, err
+		return irs.VPCInfo{}, err
 	}
-	cblogger.Infof("[%s] Subnet 생성완료", vNetworkReqInfo.Name)
+	cblogger.Infof("[%s] Subnet 생성완료", VPCReqInfo.Name)
 	cblogger.Info(res)
 
 	//생성되는데 시간이 필요 함. 약 20초정도?
 	//time.Sleep(time.Second * 20)
 
-	info, err2 := vVPCHandler.Client.Subnetworks.Get(projectID, region, vNetworkReqInfo.Name).Do()
+	info, err2 := vVPCHandler.Client.Subnetworks.Get(projectID, region, VPCReqInfo.Name).Do()
 	if err2 != nil {
 		cblogger.Error(err2)
-		return irs.VNetworkInfo{}, err2
+		return irs.VPCInfo{}, err2
 	}
-	networkInfo := irs.VNetworkInfo{
+	networkInfo := irs.VPCInfo{
 		Name:          info.Name,
 		Id:            strconv.FormatUint(info.Id, 10),
 		AddressPrefix: info.IpCidrRange,
@@ -164,56 +186,73 @@ func (vVPCHandler *GCPVPCHandler) CreateVNetwork(vNetworkReqInfo irs.VNetworkReq
 	return networkInfo, nil
 }
 
-func (vVPCHandler *GCPVPCHandler) ListVNetwork() ([]*irs.VNetworkInfo, error) {
+func (vVPCHandler *GCPVPCHandler) ListVPC() ([]*irs.VPCInfo, error) {
 	projectID := vVPCHandler.Credential.ProjectID
 	region := vVPCHandler.Region.Region
 
-	vNetworkList, err := vVPCHandler.Client.Subnetworks.List(projectID, region).Do()
+	vpcList, err := vVPCHandler.Client.Networks.List(projectID).Do()
+
 	if err != nil {
 
 		return nil, err
 	}
-	var vNetworkInfo []*irs.VNetworkInfo
-	for _, item := range vNetworkList.Items {
-		networkInfo := irs.VNetworkInfo{
-			Name:          item.Name,
-			Id:            strconv.FormatUint(item.Id, 10),
-			AddressPrefix: item.IpCidrRange,
-			KeyValueList: []irs.KeyValue{
-				{"SubnetId", item.Name},
-				{"Region", item.Region},
-				{"GatewayAddress", item.GatewayAddress},
-				{"SelfLink", item.SelfLink},
-			},
+	var vpcInfo []*irs.VPCInfo
+	
+	for _, item := range vpcList.Items {
+		iId := irs.IID{
+			NameId: item.Name,
+			SystemId: strconv.FormatUint(item.Id,10),
 		}
+		subnetInfo := vVPCHandler.GetVPC(iId)
 
-		vNetworkInfo = append(vNetworkInfo, &networkInfo)
+		vpcInfo = append(vpcInfo,&subnetInfo)
+		
 
 	}
 
-	return vNetworkInfo, nil
+	return vpcInfo, nil
 }
 
-func (vVPCHandler *GCPVPCHandler) GetVNetwork(vNetworkID string) (irs.VNetworkInfo, error) {
+func (vVPCHandler *GCPVPCHandler) GetVPC(vpcIID irs.IID) (irs.VPCInfo, error) {
 
 	projectID := vVPCHandler.Credential.ProjectID
 	region := vVPCHandler.Region.Region
-	//name := vNetworkID
-	name := GetCBDefaultVNetName()
-	cblogger.Infof("Name : [%s] / Subnet : [%s]", name, vNetworkID)
-	info, err := vVPCHandler.Client.Subnetworks.Get(projectID, region, vNetworkID).Do()
+	//name := VPCID
+	name := vpcIID.NameId
+	systemId := vpcIID.SystemId
+	
+	cblogger.Infof("NameID : [%s] / SystemID : [%s]", name, systemId)
+	subnetInfoList := []irs.SubnetInfo{}
+
+	infoVPC, err := vVPCHandler.Client.Networks.Get(projectID,systemId).Do()
 	if err != nil {
 		cblogger.Error(err)
-		return irs.VNetworkInfo{}, err
+		return irs.VPCInfo{}, err
+	}
+	if infoVPC.Subnetworks != nil {
+		for _, item := range infoVPC.Subnetworks{
+			str := strings.Split(item,"/")
+			subnet := str[len(str)-1]
+			infoSubnet, err := vVPCHandler.Client.Subnetworks.Get(projectID,region,subnet).Do()
+			if err != nil {
+				cblogger.Error(err)
+				return irs.VPCInfo{}, err
+			}
+			subnetInfoList = append(subnetInfoList,mappingSubnet(infoSubnet))
+		}
+
 	}
 
-	networkInfo := irs.VNetworkInfo{
-		Name:          info.Name,
-		Id:            strconv.FormatUint(info.Id, 10),
-		AddressPrefix: info.IpCidrRange,
+	networkInfo := irs.VPCInfo{
+		IId : irs.IID{
+			NameId: info.Name,
+			SystemId: strconv.FormatUint(info.Id, 10),
+		},
+		IPv4_CIDR:"Not support IPv4_CIDR at GCP VPC",
+		SubnetInfoList: subnetInfoList,
 		KeyValueList: []irs.KeyValue{
-			{"SubnetId", info.Name},
-			{"Region", info.Region},
+			{"RoutingMode", info.RoutingMode,
+			{"Description", info.Description},
 			{"GatewayAddress", info.GatewayAddress},
 			{"SelfLink", info.SelfLink},
 		},
@@ -222,13 +261,31 @@ func (vVPCHandler *GCPVPCHandler) GetVNetwork(vNetworkID string) (irs.VNetworkIn
 	return networkInfo, nil
 }
 
-func (vVPCHandler *GCPVPCHandler) DeleteVNetwork(vNetworkID string) (bool, error) {
+func mappingSubnet(subnet *compute.Subnetwork) irs.SubnetInfo{
+	//str := subnet.SelfLink
+	str := strings.Split(subnet.SelfLink,"/")
+	vpcName := str[len(str)-1]
+	subnetInfo := irs.SubnetInfo{
+		IId: irs.IID{
+			NameId: subnet.Name,
+			SystemId: strconv.FormatUint(subnet.Id,10),
+		},
+		IPv4_CIDR: subnet.IpCidrRange,
+		KeyValueList: []irs.KeyValue{
+			{"region",subnet.Region},
+			{"vpc",vpcName},
+		},
+	}
+	return subnetInfo
+}
+
+func (vVPCHandler *GCPVPCHandler) DeleteVPC(VPCID string) (bool, error) {
 	projectID := vVPCHandler.Credential.ProjectID
 	region := vVPCHandler.Region.Region
-	//name := vNetworkID
+	//name := VPCID
 	name := GetCBDefaultVNetName()
 	cblogger.Infof("Name : [%s]", name)
-	info, err := vVPCHandler.Client.Subnetworks.Delete(projectID, region, vNetworkID).Do()
+	info, err := vVPCHandler.Client.Subnetworks.Delete(projectID, region, VPCID).Do()
 	cblogger.Info(info)
 	if err != nil {
 		cblogger.Error(err)
