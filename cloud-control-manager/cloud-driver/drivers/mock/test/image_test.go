@@ -6,19 +6,17 @@
 //
 // by CB-Spider Team, 2020.09.
 
-package main
+package mocktest
 
 import (
 	idrv "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/interfaces"
-	icon "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/interfaces/connect"
 	irs "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/interfaces/resources"
 	mockdrv "github.com/cloud-barista/cb-spider/cloud-control-manager/cloud-driver/drivers/mock"
 
 	"testing"
-	 "fmt"
+	_ "fmt"
 )
 
-var cloudConn icon.CloudConnection
 var imageHandler irs.ImageHandler
 
 func init() {
@@ -29,15 +27,15 @@ func init() {
 		CredentialInfo: cred, 
 		RegionInfo: idrv.RegionInfo{},
 	}
-	cloudConn, _ = (&mockdrv.MockDriver{}).ConnectCloud(connInfo)
+	cloudConn, _ := (&mockdrv.MockDriver{}).ConnectCloud(connInfo)
 	imageHandler, _ = cloudConn.CreateImageHandler()
 }
 
-type TestInfo struct {
+type ImageTestInfo struct {
 	ImageId string
 }
 
-var testInfoList = []TestInfo{
+var imageTestInfoList = []ImageTestInfo{
 	{"mock-image-Name01"},
 	{"mock-image-Name02"},
 	{"mock-image-Name03"},
@@ -45,50 +43,50 @@ var testInfoList = []TestInfo{
 	{"mock-image-Name05"},
 }
 
-func TestCreateList(t *testing.T) {
+func TestImageCreateList(t *testing.T) {
 	// create
-	for _, info := range testInfoList {
-		imageReqInfo := irs.ImageReqInfo {
+	for _, info := range imageTestInfoList {
+		reqInfo := irs.ImageReqInfo {
 			IId : irs.IID{info.ImageId, ""},
 		}
-		_, err := imageHandler.CreateImage(imageReqInfo)
+		_, err := imageHandler.CreateImage(reqInfo)
 		if err != nil {
 			t.Error(err.Error())
 		}
 	}
 
 	// check the list size and values
-	imageInfoList, err := imageHandler.ListImage()
+	infoList, err := imageHandler.ListImage()
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if len(imageInfoList) != len(testInfoList) {
-		t.Errorf("The number of Images is not %d. It is %d.", len(testInfoList), len(imageInfoList))
+	if len(infoList) != len(imageTestInfoList) {
+		t.Errorf("The number of Images is not %d. It is %d.", len(imageTestInfoList), len(infoList))
 	}
-	for i, info := range imageInfoList {
-		if info.IId.SystemId != testInfoList[i].ImageId {
-			t.Errorf("Image System ID %s is not same %s", info.IId.SystemId, testInfoList[i].ImageId)
+	for i, info := range infoList {
+		if info.IId.SystemId != imageTestInfoList[i].ImageId {
+			t.Errorf("Image System ID %s is not same %s", info.IId.SystemId, imageTestInfoList[i].ImageId)
 		}
-		fmt.Printf("\n\t%#v\n", info)
+//		fmt.Printf("\n\t%#v\n", info)
 	}
 }
-/*
-func TestDeleteGet(t *testing.T) {
+
+func TestImageDeleteGet(t *testing.T) {
         // Get & check the Value
-        imageInfo, err := imageHandler.GetImage(irs.IID{testInfoList[0].ImageId, ""})
+        imageInfo, err := imageHandler.GetImage(irs.IID{imageTestInfoList[0].ImageId, ""})
         if err != nil {
                 t.Error(err.Error())
         }
-	if imageInfo.IId.SystemId != testInfoList[0].ImageId {
-		t.Errorf("Image System ID %s is not same %s", imageInfo.IId.SystemId, testInfoList[0].ImageId)
+	if imageInfo.IId.SystemId != imageTestInfoList[0].ImageId {
+		t.Errorf("Image System ID %s is not same %s", imageInfo.IId.SystemId, imageTestInfoList[0].ImageId)
 	}
 
 	// delete all
-	imageInfoList, err := imageHandler.ListImage()
+	infoList, err := imageHandler.ListImage()
         if err != nil {
                 t.Error(err.Error())
         }
-        for _, info := range imageInfoList {
+        for _, info := range infoList {
 		ret, err := imageHandler.DeleteImage(info.IId)
 		if err!=nil {
                         t.Error(err.Error())
@@ -98,12 +96,11 @@ func TestDeleteGet(t *testing.T) {
 		}
         }
 	// check the result of Delete Op
-	imageInfoList, err = imageHandler.ListImage()
+	infoList, err = imageHandler.ListImage()
         if err != nil {
                 t.Error(err.Error())
         }
-	if len(imageInfoList)>0 {
-		t.Errorf("The number of Images is not %d. It is %d.", 0, len(imageInfoList))
+	if len(infoList)>0 {
+		t.Errorf("The number of Images is not %d. It is %d.", 0, len(infoList))
 	}
 }
-*/
