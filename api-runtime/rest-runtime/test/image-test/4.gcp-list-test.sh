@@ -1,3 +1,3 @@
-export CONN_CONFIG=openstack-config01
+export CONN_CONFIG=gcp-ohio-config
 
 ./image-list-test.sh
