@@ -1,7 +1,7 @@
 
 echo "####################################################################"
 echo "## Full Test Scripts for CB-Spider IID Working Version - 2020.04.22."
-echo "##   1. VPC: Create -> List -> Get"
+echo "##   1. VPC: Create -> Add-Subnet -> List -> Get"
 echo "##   2. SecurityGroup: Create -> List -> Get"
 echo "##   3. KeyPair: Create -> List -> Get"
 echo "##   4. VM: StartVM -> List -> Get -> ListStatus -> GetStatus -> Suspend -> Resume -> Reboot"
@@ -9,11 +9,11 @@ echo "## ---------------------------------"
 echo "##   4. VM: Terminate(Delete)"
 echo "##   3. KeyPair: Delete"
 echo "##   2. SecurityGroup: Delete"
-echo "##   1. VPC: Delete"
+echo "##   1. VPC: Remove-Subnet -> Delete"
 echo "####################################################################"
 
 echo "####################################################################"
-echo "## 1. VPC: Create -> List -> Get"
+echo "## 1. VPC: Create -> Add-Subnet -> List -> Get"
 echo "####################################################################"
 $CBSPIDER_ROOT/interface/spider vpc create --config $CBSPIDER_ROOT/interface/grpc_conf.yaml -i json -d \
     '{ 
@@ -24,9 +24,19 @@ $CBSPIDER_ROOT/interface/spider vpc create --config $CBSPIDER_ROOT/interface/grp
         "SubnetInfoList": [ 
           { 
             "Name": "subnet-01", 
-            "IPv4_CIDR": "'${IPv4_CIDR}'"
+            "IPv4_CIDR": "'${IPv4_CIDR_SUBNET1}'"
           } 
         ] 
+      } 
+    }'
+
+$CBSPIDER_ROOT/interface/spider vpc add-subnet --config $CBSPIDER_ROOT/interface/grpc_conf.yaml -i json -d \
+    '{ 
+      "ConnectionName":"'${CONN_CONFIG}'",
+      "VPCName": "vpc-01", 
+      "ReqInfo": { 
+        "Name": "subnet-02", 
+        "IPv4_CIDR": "'${IPv4_CIDR_SUBNET2}'"
       } 
     }'
 
@@ -145,8 +155,9 @@ echo "####################################################################"
 $CBSPIDER_ROOT/interface/spider security delete --config $CBSPIDER_ROOT/interface/grpc_conf.yaml --cname "${CONN_CONFIG}" -n sg-01 --force false
 
 echo "####################################################################"
-echo "## 1. VPC: Delete"
+echo "## 1. VPC: Remove-Subnet -> Delete"
 echo "####################################################################"
+$CBSPIDER_ROOT/interface/spider vpc remove-subnet --config $CBSPIDER_ROOT/interface/grpc_conf.yaml --cname "${CONN_CONFIG}" --vname vpc-01 --sname subnet-02 --force false
 $CBSPIDER_ROOT/interface/spider vpc delete --config $CBSPIDER_ROOT/interface/grpc_conf.yaml --cname "${CONN_CONFIG}" -n vpc-01 --force false
 
 
