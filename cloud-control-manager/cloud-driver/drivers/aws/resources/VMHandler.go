@@ -246,6 +246,9 @@ func (vmHandler *AwsVMHandler) StartVM(vmReqInfo irs.VMReqInfo) (irs.VMInfo, err
 	}
 	//Public IP및 최신 정보 전달을 위해 부팅이 완료될 때까지 대기했다가 전달하는 것으로 변경 함.
 	//cblogger.Info("Public IP 할당 및 VM의 최신 정보 획득을 위해 EC2가 Running 상태가 될때까지 대기")
+
+	//2021-05-11 EIP 할당 로직이 제거되었으며 빠른 생성을 위해 Running 상태가 될때까지 대기하지 않음.
+	//2021-05-11 WaitForRun을 호출하지 않아도 GetVM() 호출 시 에러가 발생하지 않는 것은 확인했음. (우선은 정책이 최종 확정이 아니라서 WaitForRun을 사용하도록 원복함.)
 	cblogger.Info("VM의 최신 정보 획득을 위해 EC2가 Running 상태가 될때까지 대기")
 	WaitForRun(vmHandler.Client, newVmId)
 	cblogger.Info("EC2 Running 상태 완료 : ", runResult.Instances[0].State.Name)
@@ -449,12 +452,15 @@ func (vmHandler *AwsVMHandler) SuspendVM(vmIID irs.IID) (irs.VMStatus, error) {
 func (vmHandler *AwsVMHandler) RebootVM(vmIID irs.IID) (irs.VMStatus, error) {
 	cblogger.Infof("vmNameId : [%s]", vmIID.NameId)
 
-	vmInfo, errVmInfo := vmHandler.GetVM(vmIID)
-	if errVmInfo != nil {
-		return irs.VMStatus("Failed"), errVmInfo
-	}
-	cblogger.Info(vmInfo)
-	vmID := vmInfo.IId.SystemId
+	/*
+		vmInfo, errVmInfo := vmHandler.GetVM(vmIID)
+		if errVmInfo != nil {
+			return irs.VMStatus("Failed"), errVmInfo
+		}
+		cblogger.Info(vmInfo)
+		vmID := vmInfo.IId.SystemId
+	*/
+	vmID := vmIID.SystemId
 	cblogger.Infof("vmID : [%s]", vmID)
 
 	input := &ec2.RebootInstancesInput{
@@ -949,7 +955,7 @@ func (vmHandler *AwsVMHandler) ListVMStatus() ([]*irs.VMStatusInfo, error) {
 		CloudOS:      call.AWS,
 		RegionZone:   vmHandler.Region.Zone,
 		ResourceType: call.VM,
-		ResourceName: "",
+		ResourceName: "ListVMStatus()",
 		CloudOSAPI:   "DescribeInstances()",
 		ElapsedTime:  "",
 		ErrorMSG:     "",

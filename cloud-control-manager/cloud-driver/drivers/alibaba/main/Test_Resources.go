@@ -952,8 +952,8 @@ func main() {
 	//handleVMSpec()
 	//handleImage() //AMI
 	//handleKeyPair()
-	//handleSecurity()
-	handleVM()
+	handleSecurity()
+	//handleVM()
 
 	//handlePublicIP() // PublicIP 생성 후 conf
 
