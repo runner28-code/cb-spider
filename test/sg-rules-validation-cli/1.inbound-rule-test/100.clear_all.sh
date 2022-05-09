@@ -9,8 +9,8 @@ if [ "$1" = "" ]; then
 fi
 
 echo -e "###########################################################"
-echo -e "# terminate VM "
-echo -e "# delete resources: Keypair => SG01 => VPC/Subnet "
+echo -e "# Terminate VM "
+echo -e "# Delete resources: Keypair => SG01 => VPC/Subnet "
 echo -e "###########################################################"
 
 source ../common/setup.env $1
@@ -18,13 +18,56 @@ source setup.env $1
 
 ./99.clear_vm.sh $1
 
-for (( num=1; num <= 3; num++ ))
+echo -e "# Try to delete test key"
+for (( i=1; i <= 30; i++ ))
 do
-	../common/8.clear-resources.sh $1
-	sleep 1
+        ret=`../common/7.key-delete.sh $1`
+        echo -e "$ret"
+
+        result=`echo -e "$ret" |grep "does not exist"`
+        if [ "$result" ];then
+                break;
+        else
+                sleep 2
+        fi
 done
 
-rm ./${KEYPAIR_NAME}.pem
+
+echo -e "# Try to delete test Security Group"
+for (( i=1; i <= 30; i++ ))
+do
+        ret=`../common/7.sg-delete.sh $1`
+        echo -e "$ret"
+
+        result=`echo -e "$ret" |grep "does not exist"`
+        if [ "$result" ];then
+                break;
+        else
+                sleep 2
+        fi
+done
+
+echo -e "# Try to delete test VPC/Subnet"
+for (( i=1; i <= 30; i++ ))
+do
+        ret=`../common/7.vpc-delete.sh $1`
+        echo -e "$ret"
+
+        result=`echo -e "$ret" |grep "does not exist"`
+        if [ "$result" ];then
+                break;
+        else
+                sleep 2
+        fi
+done
+
+
+rm -f ./${KEYPAIR_NAME}.pem
+
+echo -e "###########################################################"
+echo -e "# Terminated VM "
+echo -e "# Deleted resources: Keypair => SG01 => VPC/Subnet "
+echo -e "###########################################################"
 
 echo -e "\n\n"
 
