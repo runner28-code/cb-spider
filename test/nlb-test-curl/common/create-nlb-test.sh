@@ -18,18 +18,18 @@ curl -sX POST http://localhost:1024/spider/nlb -H 'Content-Type: application/jso
 			"Scope": "REGION", 
 			"Listener": {
 				"Protocol" : "TCP",
-	       			"Port" : "80"
+	       			"Port" : "22"
 			},
 		        "VMGroup": {
 	       			"Protocol" : "TCP", 	       
-	       			"Port" : "80", 	       
+	       			"Port" : "22", 	       
 	       			"VMs" : ["vm-01", "vm-02"]
 		 	}, 
 			"HealthChecker": {
 	       			"Protocol" : "TCP", 	       
-	       			"Port" : "80", 	       
+	       			"Port" : "22", 	       
 	       			"Interval" : "10", 	       
-	       			"Timeout" : "10", 	       
+	       			"Timeout" : "9", 	       
 	       			"Threshold" : "3"       
 			}
 		}
