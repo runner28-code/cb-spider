@@ -161,7 +161,7 @@
         text-align: center;
     }
     .highlight {
-        background-color: #fffab6
+        background-color: #fffab6;
     }
     .misc {
         width: 15%;
@@ -176,6 +176,7 @@
         background-color: rgba(0,0,0,0.5);
         justify-content: center;
         align-items: center;
+        z-index: 1000;
     }
     .overlay-content {
         background-color: white;
@@ -199,7 +200,45 @@
     }
     .tag-container:hover {
         background-color: #c1e1c1;
+    }    
+    .add-btn-container {
+        margin-top: 5px;
     }
+
+    .add-tag-overlay-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: left;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        max-width: 300px;
+        word-wrap: break-word;
+        position: relative;
+    }
+
+    .add-tag-overlay-content .tag-overlay-input-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .add-tag-overlay-content .tag-overlay-input-group label {
+        flex: 1;
+        text-align: right;
+        margin-right: 10px;
+    }
+
+    .add-tag-overlay-content .tag-overlay-input-group input {
+        flex: 2;
+    }
+
+    .add-tag-overlay-content .tag-overlay-button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+    }
+
     .form-group {
         display: flex;
         align-items: center;
@@ -498,7 +537,6 @@
         clearFormFields();
     }
 
-
     function handleEsc(event) {
         if (event.key === "Escape") {
             hideOverlay();
@@ -546,6 +584,74 @@
         tagOverlay.style.display = 'none';
         document.removeEventListener('keydown', handleEscTagOverlay);
         document.removeEventListener('click', handleClickOutsideOverlay);
+    }
+
+    function showAddTagOverlay(keyPairName) {
+        const addTagOverlay = document.getElementById('add-tag-overlay');
+        const addTagOverlayContent = document.querySelector('.add-tag-overlay-content');
+        addTagOverlayContent.innerHTML = `
+            <div class="tag-overlay-input-group">
+                <label for="tagOverlayTagKey">Tag Key:</label>
+                <input type="text" id="tagOverlayTagKey" name="tagKey" required>
+            </div>
+            <div class="tag-overlay-input-group">
+                <label for="tagOverlayTagValue">Tag Value:</label>
+                <input type="text" id="tagOverlayTagValue" name="tagValue" required>
+            </div>
+            <div class="tag-overlay-button-group">
+                <button onclick="addTag('${keyPairName}')">Add</button>
+                <button onclick="closeAddTagOverlay()">Cancel</button>
+            </div>
+        `;
+        addTagOverlay.style.display = 'flex';
+        document.addEventListener('keydown', handleEscAddTagOverlay);
+    }
+
+    function closeAddTagOverlay() {
+        const addTagOverlay = document.getElementById('add-tag-overlay');
+        addTagOverlay.style.display = 'none';
+        document.removeEventListener('keydown', handleEscAddTagOverlay);
+    }
+
+    function handleEscAddTagOverlay(event) {
+        if (event.key === "Escape") {
+            closeAddTagOverlay();
+        }
+    }
+
+    function addTag(keyPairName) {
+        const tagKey = document.getElementById('tagOverlayTagKey').value;
+        const tagValue = document.getElementById('tagOverlayTagValue').value;
+        const connConfig = document.getElementById('connConfig').value;
+
+        const data = {
+            ConnectionName: connConfig,
+            ReqInfo: {
+                ResourceType: 'KEYPAIR',
+                ResourceName: keyPairName,
+                Tag: { Key: tagKey, Value: tagValue }
+            }
+        };
+
+        fetchWithProgress('/spider/tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(error => {
+                    throw new Error(error.message);
+                });
+            }
+            return response.json();
+        }).then(() => {
+            closeAddTagOverlay();
+            location.reload();
+        }).catch(error => {
+            showError("Error adding tag: " + error.message, "KeyPair Name: " + keyPairName);
+        });
     }
 
     function handleEscTagOverlay(event) {
@@ -632,8 +738,6 @@
             });
     });
 
-
-
     function createMultipleKeyPairs(count) {
         const connConfig = document.getElementById('connConfig').value;
 
@@ -670,8 +774,6 @@
                 showError("Error creating KeyPairs: " + error.message, "KeyPair Creation Error");
             });
     }
-
-
 
     function fetchWithProgress(url, options) {
         showProgressBar();
@@ -715,7 +817,6 @@
             document.getElementById('timeDisplay').textContent = ''; 
         }, 500);
     }
-
 </script>
 </head>
 <body>
@@ -763,6 +864,9 @@
                     {{range $tag := $keyPair.TagList}}
                     <div class="tag-container" onclick="showTagOverlay(event, '{{$tag.Key}}: {{$tag.Value}}', 'KEYPAIR', '{{$keyPair.IId.NameId}}')">{{$tag.Key}}: {{$tag.Value}}</div>
                     {{end}}
+                    <div class="add-btn-container">
+                        <button class="add-btn" onclick="showAddTagOverlay('{{$keyPair.IId.NameId}}')">+</button>
+                    </div>
                 </td>
                 <td class="center-align misc-cell">
                     <div class="misc-content">
@@ -811,6 +915,10 @@
 
     <div id="tag-overlay" class="tag-overlay">
         <div class="tag-overlay-content"></div>
+    </div>
+    
+    <div id="add-tag-overlay" class="overlay">
+        <div class="add-tag-overlay-content"></div>
     </div>
 
 </body>
