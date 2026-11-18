@@ -342,4 +342,4 @@ reqInfo := irs.FileSystemInfo{
 
 - [Alibaba Cloud NAS 공식 문서](https://www.alibabacloud.com/help/en/nas)
 - [Alibaba Cloud NAS API 문서](https://www.alibabacloud.com/help/en/nas/developer-reference/api-nas-2017-06-26-createfilesystem)
-- [CB-Spider File Storage Guide](https://github.com/cloud-barista/cb-spider/wiki/File-Storage-Guide)
+- [CB-Spider File Storage Guide](https://github.com/runner28-code/cb-spider/wiki/File-Storage-Guide)

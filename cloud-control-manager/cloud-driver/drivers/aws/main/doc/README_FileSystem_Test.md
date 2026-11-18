@@ -308,4 +308,4 @@ reqInfo := irs.FileSystemInfo{
 
 - [AWS EFS 공식 문서](https://docs.aws.amazon.com/efs/)
 - [AWS EFS 성능 가이드](https://docs.aws.amazon.com/ko_kr/efs/latest/ug/performance.html)
-- [CB-Spider File Storage Guide](https://github.com/cloud-barista/cb-spider/wiki/File-Storage-Guide) 
+- [CB-Spider File Storage Guide](https://github.com/runner28-code/cb-spider/wiki/File-Storage-Guide) 

@@ -11,7 +11,7 @@
     인터넷 NAT 게이트웨이를 생성하고 SNAT 규칙을 설정하도록 지원하며,
     CB-Spider에 의해 활용되는 클러스터가 더 이상 존재하지 않는 경우
     상기 자동 생성된 인터넷 NAT 게이트웨이의 삭제를 진행함.
-    [#902](https://github.com/cloud-barista/cb-spider/issues/902),
+    [#902](https://github.com/runner28-code/cb-spider/issues/902),
     [관련 문서](https://api.alibabacloud.com/document/CS/2015-12-15/CreateCluster?spm=api-workbench-intl.api_explorer.0.0.3afc9140EUUgIb)
     - Alibaba API 제약에 따라 노드그룹 관련 API 동작시 오토스케일링이
     활성화된 경우 DesiredNodeSize 값은 반영되지 않음. 

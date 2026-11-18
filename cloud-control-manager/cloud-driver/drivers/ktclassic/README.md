@@ -2,7 +2,7 @@
 
 #### # 연동 Driver 관련 기본적인 사항은 아래 link 참고
 
-   - [Cloud Driver Developer Guide](https://github.com/cloud-barista/cb-spider/wiki/Cloud-Driver-Developer-Guide) 
+   - [Cloud Driver Developer Guide](https://github.com/runner28-code/cb-spider/wiki/Cloud-Driver-Developer-Guide) 
 <p><br>
 
 #### # CB-Spider에 KT Cloud 연동 driver 적용 방법

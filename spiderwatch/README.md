@@ -1,6 +1,6 @@
 # CB-SpiderWatch
 
-**CB-SpiderWatch** is a web-based automated test and monitoring system for [CB-Spider](https://github.com/cloud-barista/cb-spider), the multi-cloud connection layer of the Cloud-Barista project.
+**CB-SpiderWatch** is a web-based automated test and monitoring system for [CB-Spider](https://github.com/runner28-code/cb-spider), the multi-cloud connection layer of the Cloud-Barista project.
 It periodically runs tests against the latest CB-Spider and presents the results in real time.
 Selective testing against a specific CB-Spider version, a subset of CSPs, or individual resource types is also supported.
 Test results reveal the operational status of Spider's core functions and the availability of CSP resources managed through Spider.

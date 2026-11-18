@@ -2,7 +2,7 @@
 
 #### # 연동 Driver 관련 기본적인 사항은 아래 link 참고
 
-   - [Cloud Driver Developer Guide](https://github.com/cloud-barista/cb-spider/wiki/Cloud-Driver-Developer-Guide) 
+   - [Cloud Driver Developer Guide](https://github.com/runner28-code/cb-spider/wiki/Cloud-Driver-Developer-Guide) 
 <p><br>
 
 #### # CB-Spider에 NHN Cloud 연동 driver 적용 방법
@@ -114,7 +114,7 @@ ssh -i /private_key_파일_경로/private_key_파일명(~~.pem) cb-user@해당_V
       - 이 외의 잘못된 RootDiskType이나 RootDiskSize를 지정하면 오류 메시지로 안내함.
    - u2.~~~ type 외의 VMSpec 일때 RootDiskType과 RootDiskSize를 지정하지 않아도 정상적으로 VM이 생성되는데, 지정하지않을 경우 default 값으로써 RootDiskType은 'General_HDD' type이 지정되고, RootDiskSize로 20G가 지정됨.
    - VMSpec type별로 가용한 RootDiskType/RootDiskSize 설정 option 및 그에 대한 disk 생성 결과 정리
-      - https://github.com/cloud-barista/cb-spider/issues/598#issuecomment-1097610395
+      - https://github.com/runner28-code/cb-spider/issues/598#issuecomment-1097610395
       
    - (참고) NHN Cloud driver를 통해 VMSpec 조회시, u2 type의 VMSpec은 LocalDiskSize가 나타나고, u2 type을 제외한 VMSpec type은 LocalDiskSize가 '0'으로 나타남.
 
@@ -144,7 +144,7 @@ ssh -i /private_key_파일_경로/private_key_파일명(~~.pem) cb-user@해당_V
    - REST API를 통해 Internet Gateway 정보 조회, 제어가 불가능하므로, VM의 public IP를 통해 외부 네트워크에서 VM에 접속하기 위해서 미리 콘솔에서 수작업으로 Internet Gateway를 생성하고 해당 VPC의 routing table에 연결해줘야함. 
       - NHN Cloud 웹 콘솔에서는 Internet Gateway 정보 조회 및 제어 기능을 지원하지만, REST API는 미지원하므로 웹 콘솔 UI를 통해서만 Internet Gateway 조회, 제어 가능
 
-![image](https://github.com/cloud-barista/cb-spider/assets/51111668/c5fc39cf-5a0e-4f10-89d7-0c80c655dd9e)
+![image](https://github.com/runner28-code/cb-spider/assets/51111668/c5fc39cf-5a0e-4f10-89d7-0c80c655dd9e)
 
 
 ​	O 본 드라이버를 통해 미국 region infra는 사용 불가
@@ -158,13 +158,13 @@ ssh -i /private_key_파일_경로/private_key_파일명(~~.pem) cb-user@해당_V
       - 노드 이미지 정보는 리전별로 지원하는 베이스 이미지 UUID로 설정해야 함 ([link](https://docs.nhncloud.com/ko/Container/NKS/ko/public-api/#uuid_3))
       - 클러스터 생성시 1개의 노드그룹 설정만 지원하며, 클러스터 생성 이후 노드 그룹 추가를 지원함
    - #### 특이사항
-      - 노드그룹에 포함된 노드의 Security Group을 사용자가 요청한 값으로 설정하지 않고 자체적으로 생성한 Security Group으로 설정되며, NetworkInfo.SecurityGroupIIDs.NameId를 '#'+SystemId로 리턴함 ([#1065](https://github.com/cloud-barista/cb-spider/issues/1065))
+      - 노드그룹에 포함된 노드의 Security Group을 사용자가 요청한 값으로 설정하지 않고 자체적으로 생성한 Security Group으로 설정되며, NetworkInfo.SecurityGroupIIDs.NameId를 '#'+SystemId로 리턴함 ([#1065](https://github.com/runner28-code/cb-spider/issues/1065))
    - #### CSP 제약 사항
-      - 첫번째 노드그룹 이름은 default-worker로 고정 생성됨 ([#867](https://github.com/cloud-barista/cb-spider/issues/867))
+      - 첫번째 노드그룹 이름은 default-worker로 고정 생성됨 ([#867](https://github.com/runner28-code/cb-spider/issues/867))
       - 프로젝트당 클러스터 생성 개수 제한 존재 (기본 3개)
-      - 클러스터 업그레이드시 마스터/워커 노드그룹 단위 업그레이드만 가능하며 동시 업그레이드 미지원 ([#1129](https://github.com/cloud-barista/cb-spider/issues/1129))
+      - 클러스터 업그레이드시 마스터/워커 노드그룹 단위 업그레이드만 가능하며 동시 업그레이드 미지원 ([#1129](https://github.com/runner28-code/cb-spider/issues/1129))
       - 현재 판교, 평촌만 NKS 지원 ([link](https://docs.nhncloud.com/ko/Container/NKS/ko/public-api/))
       - 인터넷 게이트웨이가 연결된 VPC에서만 Public K8s 엔드포인트 지정 가능
-         - 인터넷 게이트웨어 제어 API를 미제공하므로 사전 생성 및 연결 절차 수행 필요 ([#1109](https://github.com/cloud-barista/cb-spider/issues/1109))
-      - 클러스터 업그레이드시 마스터/워커 노드그룹 단위 업그레이드만 가능하며 동시 업그레이드 미지원 ([#1129](https://github.com/cloud-barista/cb-spider/issues/1129))
-      - 노드그룹의 노드에 설정되는 Security Group을 자체적으로 생성하여 적용함 ([#1065](https://github.com/cloud-barista/cb-spider/issues/1065))
+         - 인터넷 게이트웨어 제어 API를 미제공하므로 사전 생성 및 연결 절차 수행 필요 ([#1109](https://github.com/runner28-code/cb-spider/issues/1109))
+      - 클러스터 업그레이드시 마스터/워커 노드그룹 단위 업그레이드만 가능하며 동시 업그레이드 미지원 ([#1129](https://github.com/runner28-code/cb-spider/issues/1129))
+      - 노드그룹의 노드에 설정되는 Security Group을 자체적으로 생성하여 적용함 ([#1065](https://github.com/runner28-code/cb-spider/issues/1065))
